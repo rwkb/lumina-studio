@@ -1,0 +1,221 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Check, RefreshCw } from 'lucide-react';
+import { useWizardStore, MIN_SELECTED_KEYFRAMES } from '@/lib/wizard/store';
+import type { Keyframe, WizardStep } from '@/lib/wizard/types';
+import { buildMockKeyframes, pickAlternateKeyframeImage } from '@/lib/wizard/mock-data';
+import { FALLBACK_KEYFRAMES } from '@/lib/wizard/fallback-data';
+import { StepHeading } from '../step-heading';
+import { WizardActions } from '../wizard-actions';
+import { Button } from '@/components/ui/button';
+
+interface KeyframeCardProps {
+  keyframe: Keyframe;
+  isSelected: boolean;
+  onToggle: () => void;
+  onRegenerate: () => void;
+  isRegenerating: boolean;
+}
+
+function KeyframeCard({
+  keyframe,
+  isSelected,
+  onToggle,
+  onRegenerate,
+  isRegenerating,
+}: KeyframeCardProps) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -16 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className="group relative overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-shadow hover:shadow-md"
+    >
+      {/* Image Container */}
+      <div className="relative aspect-[4/5] overflow-hidden">
+        {/* Image with fallback for failed loads */}
+        <img
+          src={keyframe.imageUrl}
+          alt={keyframe.label}
+          onError={(e) => {
+            // Fallback system: Use predefined fallback keyframe image on load failure
+            const fallback = FALLBACK_KEYFRAMES.find(f => f.label === keyframe.label);
+            if (fallback && e.currentTarget.src !== fallback.imageUrl) {
+              e.currentTarget.src = fallback.imageUrl;
+            }
+          }}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+        />
+
+        {/* Selection Overlay */}
+        <button
+          type="button"
+          onClick={onToggle}
+          className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${
+            isSelected
+              ? 'bg-blush-500/20'
+              : 'bg-black/0 hover:bg-black/5'
+          }`}
+        >
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 ${
+              isSelected
+                ? 'bg-blush-500 text-white shadow-lg'
+                : 'border-2 border-white/80 bg-white/90 text-transparent shadow-md'
+            }`}
+          >
+            <Check className={`h-5 w-5 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+          </div>
+        </button>
+      </div>
+
+      {/* Label & Actions */}
+      <div className="flex items-center justify-between gap-3 p-4">
+        <h3 className="text-sm font-semibold text-ink-800">{keyframe.label}</h3>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRegenerate();
+          }}
+          disabled={isRegenerating}
+          className="h-8 px-3 text-xs text-ink-500 hover:bg-cream-100 hover:text-ink-700"
+        >
+          <RefreshCw
+            className={`mr-1.5 h-3.5 w-3.5 ${isRegenerating ? 'animate-spin' : ''}`}
+          />
+          {isRegenerating ? 'Regen...' : 'Regenerate'}
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
+
+interface LoadingSkeletonProps {
+  count?: number;
+}
+
+function LoadingSkeleton({ count = 4 }: LoadingSkeletonProps) {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.1, duration: 0.35 }}
+          className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
+        >
+          <div className="aspect-[4/5] animate-pulse bg-cream-200" />
+          <div className="flex items-center justify-between p-4">
+            <div className="h-4 w-24 animate-pulse rounded bg-cream-200" />
+            <div className="h-8 w-20 animate-pulse rounded bg-cream-200" />
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+interface StepKeyframesProps {
+  onNavigate: (step: WizardStep) => void;
+}
+
+export function StepKeyframes({ onNavigate }: StepKeyframesProps) {
+  const product = useWizardStore((state) => state.product);
+  const keyframes = useWizardStore((state) => state.keyframes);
+  const selectedKeyframeIds = useWizardStore((state) => state.selectedKeyframeIds);
+  const setKeyframes = useWizardStore((state) => state.setKeyframes);
+  const replaceKeyframeImage = useWizardStore((state) => state.replaceKeyframeImage);
+  const toggleKeyframe = useWizardStore((state) => state.toggleKeyframe);
+
+  const [isLoading, setIsLoading] = useState(keyframes.length === 0);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (keyframes.length === 0) {
+      // Simulate API call to generate keyframes
+      const timer = setTimeout(() => {
+        // TODO: BACKEND - Replace with Seedream (BytePlus) keyframe image generation.
+        const generatedKeyframes = buildMockKeyframes(product.imageUrl);
+        setKeyframes(generatedKeyframes);
+        setIsLoading(false);
+      }, 900);
+
+      return () => clearTimeout(timer);
+    }
+  }, [keyframes.length, product.imageUrl, setKeyframes]);
+
+  const handleRegenerate = async (id: string) => {
+    // TODO: BACKEND - Replace with Seedream (BytePlus) keyframe regeneration.
+    setRegeneratingId(id);
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    const currentUrls = keyframes.map((k) => k.imageUrl);
+    const newImageUrl = pickAlternateKeyframeImage(currentUrls);
+    replaceKeyframeImage(id, newImageUrl);
+
+    setRegeneratingId(null);
+  };
+
+  const handleApprove = () => {
+    // Selected keyframe IDs are already persisted in Zustand store
+    onNavigate(4);
+  };
+
+  const handleBack = () => {
+    onNavigate(2);
+  };
+
+  const selectedCount = selectedKeyframeIds.length;
+  const isValid = selectedCount >= MIN_SELECTED_KEYFRAMES;
+
+  return (
+    <div>
+      <StepHeading
+        step={3}
+        title="Select your keyframes"
+        description="Choose at least 2 frames that will define your video's visual story. We'll generate smooth transitions between them."
+      />
+
+      {isLoading ? (
+        <LoadingSkeleton count={4} />
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {keyframes.map((keyframe) => (
+            <KeyframeCard
+              key={keyframe.id}
+              keyframe={keyframe}
+              isSelected={selectedKeyframeIds.includes(keyframe.id)}
+              onToggle={() => toggleKeyframe(keyframe.id)}
+              onRegenerate={() => handleRegenerate(keyframe.id)}
+              isRegenerating={regeneratingId === keyframe.id}
+            />
+          ))}
+        </motion.div>
+      )}
+
+      <WizardActions
+        onBack={handleBack}
+        backLabel="Back to script"
+        primaryLabel="Approve Selected & Continue"
+        onPrimary={handleApprove}
+        primaryDisabled={isLoading || !isValid}
+        hint={`Select at least ${MIN_SELECTED_KEYFRAMES} keyframes to continue (${selectedCount}/${MIN_SELECTED_KEYFRAMES} selected)`}
+      />
+    </div>
+  );
+}
