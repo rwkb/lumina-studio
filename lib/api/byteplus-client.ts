@@ -1,58 +1,68 @@
 /**
  * BytePlus ModelArk API Client
  * 
- * This module provides a unified interface to BytePlus AI services:
+ * Direct API client for BytePlus AI services:
  * - Seed LLM: Text generation for scripts
  * - Seedream: Image generation for keyframes
  * - Seedance: Video generation from images
- * 
- * Uses TanStack AI adapter for OpenAI-compatible API calls.
  */
 
-import { chat, generateImage, generateVideo, getVideoJobStatus } from '@tanstack/ai';
-import { byteplusText, byteplusImage, byteplusVideo } from '@tanstack/ai-byteplus';
+// Configuration from environment
+const API_BASE = process.env.BYTEPLUS_API_BASE || 'https://ark.ap-southeast.bytepluses.com/api/v3';
+const API_KEY = process.env.ARK_API_KEY;
 
-// Model configuration from environment
-// Note: These must be valid BytePlus model names
-const SEED_LLM_MODEL = (process.env.BYTEPLUS_SEED_LLM_MODEL || 'dola-seed-2-1-turbo-260628') as any;
-const SEEDREAM_MODEL = (process.env.BYTEPLUS_SEEDREAM_MODEL || 'dola-seedream-5-0-pro-260628') as any;
-const SEEDANCE_MODEL = (process.env.BYTEPLUS_SEEDANCE_MODEL || 'dreamina-seedance-2-5-260628') as any;
+const SEED_LLM_MODEL = process.env.BYTEPLUS_SEED_LLM_MODEL || 'dola-seed-2-1-turbo-260628';
+const SEEDREAM_MODEL = process.env.BYTEPLUS_SEEDREAM_MODEL || 'dola-seedream-5-0-pro-260628';
+const SEEDANCE_MODEL = process.env.BYTEPLUS_SEEDANCE_MODEL || 'seedance-1-0-pro-250528';
 
 /**
- * Generate text using Seed LLM
+ * Generate text using Seed LLM or DeepSeek
  */
 export async function generateText(
   prompt: string,
   systemPrompt?: string
 ): Promise<string> {
   try {
-    // Combine system prompt and user prompt
-    const fullPrompt = systemPrompt 
-      ? `${systemPrompt}\n\n${prompt}` 
-      : prompt;
-
-    // TanStack AI uses a simpler format
-    const result = await chat({
-      adapter: byteplusText(SEED_LLM_MODEL),
-      messages: [
-        { role: 'user', content: fullPrompt },
-      ],
-      threadId: `text-${Date.now()}`,
+    const response = await fetch(`${API_BASE}/responses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: SEED_LLM_MODEL,
+        stream: false,
+        input: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'input_text',
+                text: systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt,
+              },
+            ],
+          },
+        ],
+      }),
     });
 
-    // Collect all text parts from the result
-    let fullText = '';
-    for await (const part of result) {
-      // Check for text message content event
-      if ('content' in part && typeof part.content === 'string') {
-        fullText += part.content;
-      }
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`API error ${response.status}: ${error}`);
     }
 
-    return fullText;
+    const data = await response.json();
+    
+    // Extract text from response
+    // Response format: { output: [{ content: [{ text: "..." }] }] }
+    if (data.output && data.output[0]?.content?.[0]?.text) {
+      return data.output[0].content[0].text;
+    }
+
+    throw new Error('Unexpected response format');
   } catch (error) {
     console.error('Text generation failed:', error);
-    throw new Error(`Failed to generate text: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 }
 
@@ -62,86 +72,143 @@ export async function generateText(
 export async function generateImageFromPrompt(
   prompt: string,
   options?: {
-    size?: '1K' | '2K' | '4K' | string;
+    size?: '1K' | '2K' | '4K';
     watermark?: boolean;
-    numberOfImages?: number;
   }
 ): Promise<string> {
   try {
-    const result = await generateImage({
-      adapter: byteplusImage(SEEDREAM_MODEL),
-      prompt,
-      threadId: `image-${Date.now()}`,
-      size: options?.size || '2K',
-      modelOptions: {
-        watermark: options?.watermark ?? false,
-        numberOfImages: options?.numberOfImages ?? 1,
+    const response = await fetch(`${API_BASE}/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
       },
+      body: JSON.stringify({
+        model: SEEDREAM_MODEL,
+        prompt,
+        response_format: 'url',
+        size: options?.size || '2K',
+        stream: false,
+        watermark: options?.watermark ?? false,
+      }),
     });
 
-    // Return first image URL
-    if (result.images && result.images.length > 0 && result.images[0]?.url) {
-      return result.images[0].url;
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`API error ${response.status}: ${error}`);
+    }
+
+    const data = await response.json();
+    
+    // Extract image URL from response
+    // Response format: { data: [{ url: "..." }] }
+    if (data.data && data.data[0]?.url) {
+      return data.data[0].url;
     }
 
     throw new Error('No image generated');
   } catch (error) {
     console.error('Image generation failed:', error);
-    throw new Error(`Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 }
 
 /**
- * Generate a video using Seedance
- * Note: This is an async job that requires polling
+ * Generate a video from an image using Seedance
+ * Note: This is an async task that requires polling
  */
 export async function generateVideoFromImage(
   imageUrl: string,
   options?: {
     prompt?: string;
     duration?: number;
-    size?: string;
+    resolution?: string;
   }
 ): Promise<string> {
   try {
-    // Start video generation job
-    const { jobId } = await generateVideo({
-      adapter: byteplusVideo(SEEDANCE_MODEL),
-      prompt: options?.prompt || '',
-      threadId: `video-${Date.now()}`,
-      size: options?.size || '9:16_720p',
-      duration: options?.duration || 10,
-      // Note: Image-to-video might need different parameters
-      // Check BytePlus documentation for exact parameters
+    // Create video generation task
+    const createResponse = await fetch(`${API_BASE}/contents/generations/tasks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: SEEDANCE_MODEL,
+        content: [
+          {
+            type: 'text',
+            text: options?.prompt || 'Create a beautiful video',
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageUrl,
+            },
+          },
+        ],
+      }),
     });
+
+    if (!createResponse.ok) {
+      const error = await createResponse.text();
+      throw new Error(`API error ${createResponse.status}: ${error}`);
+    }
+
+    const taskData = await createResponse.json();
+    const taskId = taskData.id;
+
+    if (!taskId) {
+      throw new Error('No task ID returned');
+    }
 
     // Poll for completion
-    let status = await getVideoJobStatus({
-      adapter: byteplusVideo(SEEDANCE_MODEL),
-      jobId,
-    });
-
-    let attempts = 0;
-    const maxAttempts = 60; // 5 minutes max (60 * 5 seconds)
-
-    while ((status.status === 'pending' || status.status === 'processing') && attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
-      status = await getVideoJobStatus({
-        adapter: byteplusVideo(SEEDANCE_MODEL),
-        jobId,
-      });
-      attempts++;
-    }
-
-    if (status.status === 'completed' && status.url) {
-      return status.url;
-    }
-
-    throw new Error(status.error || `Video generation ${status.status}`);
+    const videoUrl = await pollVideoTask(taskId);
+    return videoUrl;
   } catch (error) {
     console.error('Video generation failed:', error);
-    throw new Error(`Failed to generate video: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
+}
+
+/**
+ * Poll video generation task for completion
+ */
+async function pollVideoTask(taskId: string): Promise<string> {
+  const maxAttempts = 120; // 10 minutes max (120 * 5 seconds)
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    try {
+      const response = await fetch(`${API_BASE}/contents/generations/tasks/${taskId}`, {
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to check task status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Check task status
+      if (data.status === 'completed' && data.output?.url) {
+        return data.output.url;
+      } else if (data.status === 'failed') {
+        throw new Error(data.error || 'Video generation failed');
+      }
+
+      // Wait 5 seconds before next check
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      attempts++;
+    } catch (error) {
+      console.error('Error polling video task:', error);
+      throw error;
+    }
+  }
+
+  throw new Error('Video generation timeout');
 }
 
 /**
