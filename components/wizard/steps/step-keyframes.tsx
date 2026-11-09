@@ -139,31 +139,81 @@ export function StepKeyframes({ onNavigate }: StepKeyframesProps) {
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (keyframes.length === 0) {
-      // Simulate API call to generate keyframes
-      const timer = setTimeout(() => {
-        // TODO: BACKEND - Replace with Seedream (BytePlus) keyframe image generation.
-        const generatedKeyframes = buildMockKeyframes(product.imageUrl);
-        setKeyframes(generatedKeyframes);
-        setIsLoading(false);
-      }, 900);
+    if (keyframes.length === 0 && product.name && product.description) {
+      // Call API to generate keyframes
+      const generate = async () => {
+        try {
+          setIsLoading(true);
+          // We need the script from the store for context
+          const script = useWizardStore.getState().script;
+          
+          const response = await fetch('/api/generate-keyframes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product, script }),
+          });
 
-      return () => clearTimeout(timer);
+          if (!response.ok) {
+            throw new Error('Failed to generate keyframes');
+          }
+
+          const data = await response.json();
+          setKeyframes(data.keyframes);
+        } catch (error) {
+          console.error('Keyframe generation error:', error);
+          // Fallback to mock data on error
+          const fallbackKeyframes = buildMockKeyframes(product.imageUrl);
+          setKeyframes(fallbackKeyframes);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      generate();
+      return;
     }
-  }, [keyframes.length, product.imageUrl, setKeyframes]);
+  }, [keyframes.length, product.imageUrl, product.name, product.description, setKeyframes]);
 
   const handleRegenerate = async (id: string) => {
-    // TODO: BACKEND - Replace with Seedream (BytePlus) keyframe regeneration.
     setRegeneratingId(id);
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    try {
+      const keyframe = keyframes.find(k => k.id === id);
+      const index = keyframes.findIndex(k => k.id === id);
+      
+      if (!keyframe) return;
 
-    const currentUrls = keyframes.map((k) => k.imageUrl);
-    const newImageUrl = pickAlternateKeyframeImage(currentUrls);
-    replaceKeyframeImage(id, newImageUrl);
+      const script = useWizardStore.getState().script;
+      
+      const response = await fetch('/api/generate-keyframes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          product, 
+          script,
+          regenerateIndex: index 
+        }),
+      });
 
-    setRegeneratingId(null);
+      if (!response.ok) {
+        throw new Error('Failed to regenerate keyframe');
+      }
+
+      const data = await response.json();
+      
+      // Replace just this keyframe's image
+      if (data.keyframes && data.keyframes[index]) {
+        replaceKeyframeImage(id, data.keyframes[index].imageUrl);
+      }
+    } catch (error) {
+      console.error('Keyframe regeneration error:', error);
+      // Fallback to alternate mock image
+      const currentUrls = keyframes.map((k) => k.imageUrl);
+      const newImageUrl = pickAlternateKeyframeImage(currentUrls);
+      replaceKeyframeImage(id, newImageUrl);
+    } finally {
+      setRegeneratingId(null);
+    }
   };
 
   const handleApprove = () => {

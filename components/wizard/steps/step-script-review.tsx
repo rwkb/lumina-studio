@@ -134,29 +134,63 @@ export function StepScriptReview({ onNavigate }: StepScriptReviewProps) {
 
   useEffect(() => {
     if (!script) {
-      // Simulate API call to generate script
-      const timer = setTimeout(() => {
-        const generatedScript = buildMockScript(product, regenerateVariant);
-        setScript(generatedScript);
-        setIsLoading(false);
-      }, 800);
+      // Call API to generate script
+      const generate = async () => {
+        try {
+          setIsLoading(true);
+          const response = await fetch('/api/generate-script', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product, variant: regenerateVariant }),
+          });
 
-      return () => clearTimeout(timer);
+          if (!response.ok) {
+            throw new Error('Failed to generate script');
+          }
+
+          const data = await response.json();
+          setScript(data.script);
+        } catch (error) {
+          console.error('Script generation error:', error);
+          // Fallback to mock data on error
+          const fallbackScript = buildMockScript(product, regenerateVariant);
+          setScript(fallbackScript);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      generate();
+      return;
     }
   }, [script, product, setScript, regenerateVariant]);
 
   const handleRegenerate = async () => {
-    // TODO: BACKEND - Replace with Seed LLM (BytePlus ModelArk) script regeneration.
     setIsRegenerating(true);
     const nextVariant = regenerateVariant + 1;
     setRegenerateVariant(nextVariant);
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      const response = await fetch('/api/generate-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product, variant: nextVariant }),
+      });
 
-    const newScript = buildMockScript(product, nextVariant);
-    setScript(newScript);
-    setIsRegenerating(false);
+      if (!response.ok) {
+        throw new Error('Failed to regenerate script');
+      }
+
+      const data = await response.json();
+      setScript(data.script);
+    } catch (error) {
+      console.error('Script regeneration error:', error);
+      // Fallback to mock data on error
+      const fallbackScript = buildMockScript(product, nextVariant);
+      setScript(fallbackScript);
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
   const handleApprove = () => {

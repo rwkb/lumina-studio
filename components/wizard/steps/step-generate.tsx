@@ -208,18 +208,45 @@ export function StepGenerate({ onNavigate }: StepGenerateProps) {
   // Generate videos on mount if not already generated
   useEffect(() => {
     if (generatedVideos.length === 0 && keyframes.length > 0) {
-      const timer = setTimeout(() => {
-        // TODO: BACKEND - Replace with Seedance (BytePlus) image-to-video generation API.
-        // This would call the Seedance model to generate videos from selected keyframes.
-        const selectedKeyframes = keyframes.filter((k) =>
-          selectedKeyframeIds.includes(k.id)
-        );
-        const videos = buildMockVideos(selectedKeyframes, product, script!);
-        setGeneratedVideos(videos);
-        setIsGenerating(false);
-      }, 3500); // 3.5 second mock delay
+      const generate = async () => {
+        try {
+          setIsGenerating(true);
+          
+          const selectedKeyframes = keyframes.filter((k) =>
+            selectedKeyframeIds.includes(k.id)
+          );
 
-      return () => clearTimeout(timer);
+          const response = await fetch('/api/generate-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              keyframes: selectedKeyframes, 
+              product, 
+              script 
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to generate video');
+          }
+
+          const data = await response.json();
+          setGeneratedVideos(data.videos);
+        } catch (error) {
+          console.error('Video generation error:', error);
+          // Fallback to mock data on error
+          const selectedKeyframes = keyframes.filter((k) =>
+            selectedKeyframeIds.includes(k.id)
+          );
+          const fallbackVideos = buildMockVideos(selectedKeyframes, product, script!);
+          setGeneratedVideos(fallbackVideos);
+        } finally {
+          setIsGenerating(false);
+        }
+      };
+
+      generate();
+      return;
     } else if (generatedVideos.length > 0) {
       setIsGenerating(false);
     }

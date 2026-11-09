@@ -49,11 +49,17 @@ interface WizardState {
 }
 
 /**
+ * Check if running in browser environment
+ */
+const isBrowser = typeof window !== 'undefined';
+
+/**
  * Safe storage wrapper with error handling for hydration failures
  * Falls back to in-memory storage if localStorage is unavailable
  */
 const safeStorage: StateStorage = {
   getItem: (name: string): string | null => {
+    if (!isBrowser) return null;
     try {
       const stored = localStorage.getItem(name);
       if (!stored) return null;
@@ -71,6 +77,7 @@ const safeStorage: StateStorage = {
     }
   },
   setItem: (name: string, value: string): void => {
+    if (!isBrowser) return;
     try {
       localStorage.setItem(name, value);
     } catch (error) {
@@ -80,6 +87,7 @@ const safeStorage: StateStorage = {
     }
   },
   removeItem: (name: string): void => {
+    if (!isBrowser) return;
     try {
       localStorage.removeItem(name);
     } catch (error) {
