@@ -148,6 +148,9 @@ export async function generateScript(
   product: ProductDraft,
   variant: number = 0
 ): Promise<VideoScript> {
+  console.log('[Script Generation] Starting generation for:', product.name);
+  console.log('[Script Generation] Variant:', variant);
+  
   // Determine language instruction
   const languageInstruction = {
     'English': 'Write the ENTIRE script in English only. DO NOT include any Chinese characters. Translate any Chinese product descriptions to English.',
@@ -183,17 +186,30 @@ Variant: ${variant} (generate a ${variant === 0 ? 'first' : 'different'} creativ
 Return only valid JSON with no additional text.`;
 
   try {
+    console.log('[Script Generation] Calling BytePlus API...');
+    console.log('[Script Generation] Prompt length:', prompt.length);
+    
     const response = await generateText(prompt, SYSTEM_PROMPT);
+    console.log('[Script Generation] Response received, length:', response.length);
+    console.log('[Script Generation] Response preview:', response.substring(0, 200));
     
     // Parse JSON response
+    console.log('[Script Generation] Parsing JSON...');
     const parsed = JSON.parse(response);
+    console.log('[Script Generation] JSON parsed successfully');
     
     // Validate required fields
     if (!parsed.hook || !parsed.body || !parsed.cta) {
+      console.error('[Script Generation] Missing required fields:', {
+        hasHook: !!parsed.hook,
+        hasBody: !!parsed.body,
+        hasCta: !!parsed.cta
+      });
       throw new Error('Missing required script fields');
     }
 
     // Post-process: Clean up the script
+    console.log('[Script Generation] Cleaning up script...');
     const cleanedScript = {
       hook: cleanText(parsed.hook, 'hook', undefined, product.language),
       body: cleanText(parsed.body, 'body', product.duration, product.language),
@@ -204,10 +220,12 @@ Return only valid JSON with no additional text.`;
       hashtags: parsed.hashtags || '#beauty #skincare',
     };
 
+    console.log('[Script Generation] Script generation complete');
     return cleanedScript;
   } catch (error) {
     console.error('[Script Generation] API call failed:', error);
     console.error('[Script Generation] Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('[Script Generation] Stack:', error instanceof Error ? error.stack : 'No stack trace');
     console.error('[Script Generation] Using FALLBACK_SCRIPT instead');
     
     // Fallback to mock data on error
