@@ -1,4 +1,4 @@
-# Lumina Studio
+# SeedReel
 
 AI-powered video generation wizard for fashion and cosmetics brands. Transform product images into stunning social media videos with elegant, premium aesthetics.
 

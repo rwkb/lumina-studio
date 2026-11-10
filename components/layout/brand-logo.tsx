@@ -8,7 +8,7 @@ export function BrandLogo() {
         <Sparkles className="h-4 w-4" strokeWidth={2} />
       </span>
       <span className="text-[17px] font-semibold tracking-tight text-ink-900">
-        Lumina <span className="font-normal text-ink-500">Studio</span>
+        Seed<span className="font-normal text-ink-500">Reel</span>
       </span>
     </Link>
   );

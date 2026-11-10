@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 
 /**
- * Error Boundary for Lumina Studio
+ * Error Boundary for SeedReel
  * Catches runtime errors and provides an elegant fallback UI
  * matching the soft luxury design system
  */
@@ -17,7 +17,7 @@ export default function Error({
 }) {
   useEffect(() => {
     // Log error for debugging - in production, send to error tracking service
-    console.error('Lumina Studio error:', error);
+    console.error('SeedReel error:', error);
   }, [error]);
 
   return (

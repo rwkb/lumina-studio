@@ -30,7 +30,7 @@ export function HeroSection() {
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-500">
-            Lumina Studio writes the hook, storyboards the keyframes, and renders
+            SeedReel writes the hook, storyboards the keyframes, and renders
             platform-ready short videos for TikTok, Reels, and Shorts, so every
             launch looks like a campaign.
           </p>

@@ -21,7 +21,7 @@ export function RecentProjects() {
           </h2>
         </div>
         <p className="max-w-sm text-sm leading-relaxed text-ink-500">
-          Launches made with Lumina Studio this month, ready to post across every feed.
+          Launches made with SeedReel this month, ready to post across every feed.
         </p>
       </motion.div>
 
