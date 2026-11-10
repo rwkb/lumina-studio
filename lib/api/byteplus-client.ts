@@ -8,12 +8,16 @@
  */
 
 // Configuration from environment
-const API_BASE = process.env.BYTEPLUS_API_BASE || 'https://ark.ap-southeast.bytepluses.com/api/v3';
-const API_KEY = process.env.ARK_API_KEY;
-
-const SEED_LLM_MODEL = process.env.BYTEPLUS_SEED_LLM_MODEL || 'dola-seed-2-1-turbo-260628';
-const SEEDREAM_MODEL = process.env.BYTEPLUS_SEEDREAM_MODEL || 'seedream-5-0-260128';
-const SEEDANCE_MODEL = process.env.BYTEPLUS_SEEDANCE_MODEL || 'seedance-1-0-pro-fast-251015';
+// NOTE: Access env vars at runtime (not at module load time) for Netlify functions
+function getConfig() {
+  const API_BASE = process.env.BYTEPLUS_API_BASE || 'https://ark.ap-southeast.bytepluses.com/api/v3';
+  const API_KEY = process.env.ARK_API_KEY;
+  const SEED_LLM_MODEL = process.env.BYTEPLUS_SEED_LLM_MODEL || 'dola-seed-2-1-turbo-260628';
+  const SEEDREAM_MODEL = process.env.BYTEPLUS_SEEDREAM_MODEL || 'seedream-5-0-260128';
+  const SEEDANCE_MODEL = process.env.BYTEPLUS_SEEDANCE_MODEL || 'seedance-1-0-pro-fast-251015';
+  
+  return { API_BASE, API_KEY, SEED_LLM_MODEL, SEEDREAM_MODEL, SEEDANCE_MODEL };
+}
 
 /**
  * Generate text using Seed LLM or DeepSeek
@@ -22,7 +26,23 @@ export async function generateText(
   prompt: string,
   systemPrompt?: string
 ): Promise<string> {
+  const { API_BASE, API_KEY, SEED_LLM_MODEL } = getConfig();
+  
+  // Debug logging
+  console.log('[BytePlus Client] Config check:', {
+    hasApiKey: !!API_KEY,
+    apiKeyPrefix: API_KEY ? API_KEY.substring(0, 10) + '...' : 'undefined',
+    apiBase: API_BASE,
+    model: SEED_LLM_MODEL
+  });
+  
+  if (!API_KEY) {
+    throw new Error('ARK_API_KEY environment variable is not set');
+  }
+  
   try {
+    console.log('[BytePlus Client] Sending request to:', `${API_BASE}/responses`);
+    
     const response = await fetch(`${API_BASE}/responses`, {
       method: 'POST',
       headers: {
@@ -48,22 +68,26 @@ export async function generateText(
 
     if (!response.ok) {
       const error = await response.text();
+      console.error('[BytePlus Client] API error:', response.status, error);
       throw new Error(`API error ${response.status}: ${error}`);
     }
 
     const data = await response.json();
+    console.log('[BytePlus Client] Response received, output length:', data.output?.length);
     
     // Extract text from response
     // Response format: { output: [reasoning_block, { type: "message", content: [{ type: "output_text", text: "..." }] }] }
     // Find the message in the output array (not the reasoning block)
     const messageOutput = data.output?.find((item: any) => item.type === 'message');
     if (messageOutput?.content?.[0]?.text) {
+      console.log('[BytePlus Client] Successfully extracted text from response');
       return messageOutput.content[0].text;
     }
 
+    console.error('[BytePlus Client] Unexpected response format:', JSON.stringify(data, null, 2));
     throw new Error('Unexpected response format');
   } catch (error) {
-    console.error('Text generation failed:', error);
+    console.error('[BytePlus Client] Text generation failed:', error);
     throw error;
   }
 }
@@ -78,6 +102,12 @@ export async function generateImageFromPrompt(
     watermark?: boolean;
   }
 ): Promise<string> {
+  const { API_BASE, API_KEY, SEEDREAM_MODEL } = getConfig();
+  
+  if (!API_KEY) {
+    throw new Error('ARK_API_KEY environment variable is not set');
+  }
+  
   try {
     const response = await fetch(`${API_BASE}/images/generations`, {
       method: 'POST',
@@ -127,6 +157,12 @@ export async function generateVideoFromImage(
     resolution?: string;
   }
 ): Promise<string> {
+  const { API_BASE, API_KEY, SEEDANCE_MODEL } = getConfig();
+  
+  if (!API_KEY) {
+    throw new Error('ARK_API_KEY environment variable is not set');
+  }
+  
   try {
     // Create video generation task
     const createResponse = await fetch(`${API_BASE}/contents/generations/tasks`, {
@@ -177,6 +213,7 @@ export async function generateVideoFromImage(
  * Poll video generation task for completion
  */
 async function pollVideoTask(taskId: string): Promise<string> {
+  const { API_BASE, API_KEY } = getConfig();
   const maxAttempts = 120; // 10 minutes max (120 * 5 seconds)
   let attempts = 0;
 
