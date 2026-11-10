@@ -12,8 +12,8 @@ const API_BASE = process.env.BYTEPLUS_API_BASE || 'https://ark.ap-southeast.byte
 const API_KEY = process.env.ARK_API_KEY;
 
 const SEED_LLM_MODEL = process.env.BYTEPLUS_SEED_LLM_MODEL || 'dola-seed-2-1-turbo-260628';
-const SEEDREAM_MODEL = process.env.BYTEPLUS_SEEDREAM_MODEL || 'dola-seedream-5-0-pro-260628';
-const SEEDANCE_MODEL = process.env.BYTEPLUS_SEEDANCE_MODEL || 'seedance-1-0-pro-250528';
+const SEEDREAM_MODEL = process.env.BYTEPLUS_SEEDREAM_MODEL || 'seedream-5-0-260128';
+const SEEDANCE_MODEL = process.env.BYTEPLUS_SEEDANCE_MODEL || 'seedance-1-0-pro-fast-251015';
 
 /**
  * Generate text using Seed LLM or DeepSeek
@@ -87,7 +87,7 @@ export async function generateImageFromPrompt(
         model: SEEDREAM_MODEL,
         prompt,
         response_format: 'url',
-        size: options?.size || '2K',
+        size: options?.size || '2k',
         stream: false,
         watermark: options?.watermark ?? false,
       }),
