@@ -152,11 +152,19 @@ export function StepKeyframes({ onNavigate, onStatusChange }: StepKeyframesProps
           const script = useWizardStore.getState().script;
           
           console.log('[Keyframes] Calling /api/generate-keyframes...');
+          
+          // Add timeout to fetch (60 seconds)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000);
+          
           const response = await fetch('/api/generate-keyframes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ product, script }),
+            signal: controller.signal
           });
+
+          clearTimeout(timeoutId);
 
           console.log('[Keyframes] Response status:', response.status);
           

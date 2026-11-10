@@ -142,11 +142,18 @@ export function StepScriptReview({ onNavigate, onStatusChange }: StepScriptRevie
           setIsLoading(true);
           onStatusChange?.('checking');
           
+          // Add timeout (90 seconds for script generation)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 90000);
+          
           const response = await fetch('/api/generate-script', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ product, variant: regenerateVariant }),
+            signal: controller.signal
           });
+
+          clearTimeout(timeoutId);
 
           if (!response.ok) {
             throw new Error('Failed to generate script');
@@ -179,11 +186,18 @@ export function StepScriptReview({ onNavigate, onStatusChange }: StepScriptRevie
     try {
       onStatusChange?.('checking');
       
+      // Add timeout (90 seconds for script generation)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
+      
       const response = await fetch('/api/generate-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product, variant: nextVariant }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error('Failed to regenerate script');

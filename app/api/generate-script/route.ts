@@ -62,3 +62,11 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function GET() {
+  return NextResponse.json({ 
+    status: 'ok',
+    message: 'Script generation endpoint is ready',
+    timestamp: new Date().toISOString()
+  });
+}
