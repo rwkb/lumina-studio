@@ -146,23 +146,42 @@ export function StepKeyframes({ onNavigate, onStatusChange }: StepKeyframesProps
       const generate = async () => {
         try {
           setIsLoading(true);
+          console.log('[Keyframes] Starting generation for:', product.name);
+          
           // We need the script from the store for context
           const script = useWizardStore.getState().script;
           
+          console.log('[Keyframes] Calling /api/generate-keyframes...');
           const response = await fetch('/api/generate-keyframes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ product, script }),
           });
 
+          console.log('[Keyframes] Response status:', response.status);
+          
           if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[Keyframes] API error:', response.status, errorText);
             throw new Error('Failed to generate keyframes');
           }
 
           const data = await response.json();
+          console.log('[Keyframes] Received data:', data);
           setKeyframes(data.keyframes);
+          
+          // Notify parent of successful API status
+          if (onStatusChange) {
+            onStatusChange('connected');
+          }
         } catch (error) {
-          console.error('Keyframe generation error:', error);
+          console.error('[Keyframes] Generation error:', error);
+          
+          // Notify parent of fallback status
+          if (onStatusChange) {
+            onStatusChange('fallback');
+          }
+          
           // Fallback to mock data on error
           const fallbackKeyframes = buildMockKeyframes(product.imageUrl);
           setKeyframes(fallbackKeyframes);
