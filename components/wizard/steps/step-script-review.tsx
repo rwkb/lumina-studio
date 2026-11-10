@@ -125,8 +125,6 @@ interface StepScriptReviewProps {
 }
 
 export function StepScriptReview({ onNavigate, onStatusChange }: StepScriptReviewProps) {
-
-export function StepScriptReview({ onNavigate }: StepScriptReviewProps) {
   const product = useWizardStore((state) => state.product);
   const script = useWizardStore((state) => state.script);
   const setScript = useWizardStore((state) => state.setScript);
