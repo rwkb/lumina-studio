@@ -17,49 +17,48 @@ const KEYFRAME_LABELS = [
 
 /**
  * Generate 4 keyframe images for the video
+ * Note: Generates sequentially to avoid Netlify function timeout
  */
 export async function generateKeyframes(
   product: ProductDraft,
   script: VideoScript
 ): Promise<Keyframe[]> {
-  try {
-    // Generate all 4 keyframes in parallel for speed
-    const prompts = KEYFRAME_LABELS.map((label, index) =>
-      buildKeyframePrompt(product, script, label, index)
-    );
+  const keyframes: Keyframe[] = [];
+  const timestamp = Date.now();
 
-    // Use Promise.allSettled to handle partial failures
-    const results = await Promise.allSettled(
-      prompts.map(prompt => generateImageFromPrompt(prompt, { size: '2K' }))
-    );
-
-    // Build keyframes from results
-    const keyframes: Keyframe[] = [];
-    const timestamp = Date.now();
-
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        keyframes.push({
-          id: `kf-${timestamp}-${index}`,
-          label: KEYFRAME_LABELS[index],
-          imageUrl: result.value,
-        });
-      } else {
-        console.warn(`Keyframe ${index} generation failed:`, result.reason);
-        // Use fallback for this specific keyframe
-        keyframes.push({
-          id: `kf-${timestamp}-${index}`,
-          label: KEYFRAME_LABELS[index],
-          imageUrl: FALLBACK_KEYFRAMES[index]?.imageUrl || '',
-        });
-      }
-    });
-
-    return keyframes;
-  } catch (error) {
-    console.error('Keyframe generation failed, using fallback:', error);
-    return FALLBACK_KEYFRAMES;
+  console.log('[Keyframe Generation] Starting sequential image generation...');
+  
+  // Generate images sequentially to avoid timeout
+  for (let index = 0; index < KEYFRAME_LABELS.length; index++) {
+    const label = KEYFRAME_LABELS[index];
+    console.log(`[Keyframe Generation] Generating ${label} (${index + 1}/4)...`);
+    
+    try {
+      const prompt = buildKeyframePrompt(product, script, label, index);
+      // Use 1K for faster generation
+      const imageUrl = await generateImageFromPrompt(prompt, { size: '1K' });
+      
+      keyframes.push({
+        id: `kf-${timestamp}-${index}`,
+        label,
+        imageUrl,
+      });
+      
+      console.log(`[Keyframe Generation] ${label} generated successfully`);
+    } catch (error) {
+      console.warn(`[Keyframe Generation] ${label} failed, using fallback:`, error);
+      // Use fallback for this specific keyframe
+      keyframes.push({
+        id: `kf-${timestamp}-${index}`,
+        label,
+        imageUrl: FALLBACK_KEYFRAMES[index]?.imageUrl || '',
+      });
+    }
   }
+
+  console.log(`[Keyframe Generation] Complete. Generated ${keyframes.filter(k => k.imageUrl && !k.imageUrl.includes('unsplash')).length}/4 from API`);
+  
+  return keyframes;
 }
 
 /**
