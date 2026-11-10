@@ -54,9 +54,11 @@ export async function generateText(
     const data = await response.json();
     
     // Extract text from response
-    // Response format: { output: [{ content: [{ text: "..." }] }] }
-    if (data.output && data.output[0]?.content?.[0]?.text) {
-      return data.output[0].content[0].text;
+    // Response format: { output: [reasoning_block, { type: "message", content: [{ type: "output_text", text: "..." }] }] }
+    // Find the message in the output array (not the reasoning block)
+    const messageOutput = data.output?.find((item: any) => item.type === 'message');
+    if (messageOutput?.content?.[0]?.text) {
+      return messageOutput.content[0].text;
     }
 
     throw new Error('Unexpected response format');
