@@ -21,6 +21,8 @@ export const EMPTY_PRODUCT: ProductDraft = {
   platform: 'TikTok',
   style: 'Clean Luxury',
   brandNotes: '',
+  duration: '30s',
+  language: 'English',
 };
 
 export const MIN_SELECTED_KEYFRAMES = 2;

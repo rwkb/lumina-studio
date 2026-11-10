@@ -11,15 +11,29 @@ import { FALLBACK_SCRIPT } from '../fallback-data';
 const SYSTEM_PROMPT = `You are an expert video script writer for fashion and beauty brands.
 Generate engaging, platform-optimized video scripts that drive conversions.
 
+IMPORTANT RULES:
+1. Keep scripts SHORT and PUNCHY - optimized for short-form video
+2. Match the requested duration precisely
+3. Write in the requested language
+4. Hook should be 1 short sentence (2-3 seconds)
+5. Body should be concise (2-3 key benefits maximum)
+6. Voiceover should match the duration timing
+7. Avoid repeating product description verbatim
+
+Duration Guidelines:
+- 15s: Hook (2s) + 1 key benefit (8s) + CTA (5s)
+- 30s: Hook (3s) + 2-3 benefits (18s) + CTA (9s)  
+- 60s: Hook (3s) + 3-4 benefits (42s) + CTA (15s)
+
 Always respond with valid JSON in this exact format:
 {
-  "hook": "0-3 second attention-grabbing opening",
-  "body": "Main product benefits and features",
-  "cta": "Clear call to action",
-  "voiceover": "Complete voiceover script",
-  "seedancePrompt": "Technical video generation prompt for AI",
+  "hook": "Attention-grabbing opening (1 short sentence)",
+  "body": "Concise product benefits (2-3 sentences max)",
+  "cta": "Clear call to action (1 sentence)",
+  "voiceover": "Complete voiceover matching duration",
+  "seedancePrompt": "Technical video generation prompt",
   "caption": "Social media caption with personality",
-  "hashtags": "Relevant hashtags including #skincare #beauty"
+  "hashtags": "Relevant hashtags"
 }`;
 
 /**
@@ -29,6 +43,13 @@ export async function generateScript(
   product: ProductDraft,
   variant: number = 0
 ): Promise<VideoScript> {
+  // Determine language instruction
+  const languageInstruction = {
+    'English': 'Write the script in English',
+    '繁體中文': '用繁體中文撰寫腳本',
+    '简体中文': '用简体中文撰写脚本',
+  }[product.language];
+
   const prompt = `Generate a ${product.platform} video script for:
 
 Product Name: ${product.name}
@@ -41,6 +62,9 @@ ${getPlatformRequirements(product.platform)}
 
 Style Guidelines:
 ${getStyleGuidelines(product.style)}
+
+Duration: ${product.duration} - Match this timing precisely
+Language: ${languageInstruction}
 
 Variant: ${variant} (generate a ${variant === 0 ? 'first' : 'different'} creative approach)
 

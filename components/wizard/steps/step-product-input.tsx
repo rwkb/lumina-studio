@@ -1,7 +1,7 @@
 'use client';
 
 import { useWizardStore, isProductComplete } from '@/lib/wizard/store';
-import { PLATFORMS, type Platform, type ImageSource } from '@/lib/wizard/types';
+import { PLATFORMS, VIDEO_DURATIONS, LANGUAGES, type Platform, type VideoDuration, type Language, type ImageSource } from '@/lib/wizard/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -98,6 +98,48 @@ export function StepProductInput({ onNavigate }: StepProductInputProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="duration" className="text-sm font-medium text-ink-700">
+                Video Duration
+              </Label>
+              <Select
+                value={product.duration}
+                onValueChange={(value) => updateProduct({ duration: value as VideoDuration })}
+              >
+                <SelectTrigger id="duration" className="h-12 rounded-xl border-input bg-background text-ink-900">
+                  <SelectValue placeholder="Choose duration" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {VIDEO_DURATIONS.map((duration) => (
+                    <SelectItem key={duration} value={duration} className="rounded-lg">
+                      {duration}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="language" className="text-sm font-medium text-ink-700">
+              Script Language
+            </Label>
+            <Select
+              value={product.language}
+              onValueChange={(value) => updateProduct({ language: value as Language })}
+            >
+              <SelectTrigger id="language" className="h-12 rounded-xl border-input bg-background text-ink-900">
+                <SelectValue placeholder="Choose language" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {LANGUAGES.map((language) => (
+                  <SelectItem key={language} value={language} className="rounded-lg">
+                    {language}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid gap-3">

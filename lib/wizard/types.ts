@@ -19,6 +19,12 @@ export const STYLE_PRESETS = [
 
 export type StylePreset = (typeof STYLE_PRESETS)[number];
 
+export const VIDEO_DURATIONS = ['15s', '30s', '60s'] as const;
+export type VideoDuration = (typeof VIDEO_DURATIONS)[number];
+
+export const LANGUAGES = ['English', '繁體中文', '简体中文'] as const;
+export type Language = (typeof LANGUAGES)[number];
+
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
 
 export type ImageSource = 'upload' | 'url';
@@ -31,6 +37,8 @@ export interface ProductDraft {
   platform: Platform;
   style: StylePreset;
   brandNotes: string;
+  duration: VideoDuration;
+  language: Language;
 }
 
 export interface VideoScript {
