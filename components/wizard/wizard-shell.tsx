@@ -7,6 +7,7 @@ import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { ProgressStepper } from './progress-stepper';
 import { Button } from '@/components/ui/button';
+import { APIStatusBar, type APIStatus } from './api-status-indicator';
 import { StepProductInput } from './steps/step-product-input';
 import { StepScriptReview } from './steps/step-script-review';
 import { StepKeyframes } from './steps/step-keyframes';
@@ -46,6 +47,9 @@ export function WizardShell() {
 
   const [isReady, setIsReady] = useState(false);
   const [direction, setDirection] = useState(1);
+  const [textStatus, setTextStatus] = useState<APIStatus>('idle');
+  const [imageStatus, setImageStatus] = useState<APIStatus>('idle');
+  const [videoStatus, setVideoStatus] = useState<APIStatus>('idle');
 
   useEffect(() => {
     setIsReady(true);
@@ -77,11 +81,11 @@ export function WizardShell() {
       case 1:
         return <StepProductInput onNavigate={navigate} />;
       case 2:
-        return <StepScriptReview onNavigate={navigate} />;
+        return <StepScriptReview onNavigate={navigate} onStatusChange={setTextStatus} />;
       case 3:
-        return <StepKeyframes onNavigate={navigate} />;
+        return <StepKeyframes onNavigate={navigate} onStatusChange={setImageStatus} />;
       case 4:
-        return <StepGenerate onNavigate={navigate} />;
+        return <StepGenerate onNavigate={navigate} onStatusChange={setVideoStatus} />;
       case 5:
         return <StepResult onNavigate={navigate} />;
     }
@@ -91,6 +95,14 @@ export function WizardShell() {
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-20 pt-10 lg:px-10">
+        <div className="mb-4">
+          <APIStatusBar
+            textStatus={textStatus}
+            imageStatus={imageStatus}
+            videoStatus={videoStatus}
+          />
+        </div>
+        
         <div className="mb-6 flex items-center justify-between">
           <ProgressStepper currentStep={currentStep} onSelect={navigate} />
           <Button

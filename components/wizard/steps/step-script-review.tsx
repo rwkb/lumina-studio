@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, RefreshCw, Sparkles } from 'lucide-react';
+import type { APIStatus } from '@/components/wizard/api-status-indicator';
 import { useWizardStore } from '@/lib/wizard/store';
 import type { VideoScript, WizardStep } from '@/lib/wizard/types';
 import { buildMockScript } from '@/lib/wizard/mock-data';
@@ -120,7 +121,10 @@ function LoadingSkeleton({ count = 5 }: LoadingSkeletonProps) {
 
 interface StepScriptReviewProps {
   onNavigate: (step: WizardStep) => void;
+  onStatusChange?: (status: APIStatus) => void;
 }
+
+export function StepScriptReview({ onNavigate, onStatusChange }: StepScriptReviewProps) {
 
 export function StepScriptReview({ onNavigate }: StepScriptReviewProps) {
   const product = useWizardStore((state) => state.product);
@@ -138,6 +142,8 @@ export function StepScriptReview({ onNavigate }: StepScriptReviewProps) {
       const generate = async () => {
         try {
           setIsLoading(true);
+          onStatusChange?.('checking');
+          
           const response = await fetch('/api/generate-script', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -150,11 +156,13 @@ export function StepScriptReview({ onNavigate }: StepScriptReviewProps) {
 
           const data = await response.json();
           setScript(data.script);
+          onStatusChange?.('working');
         } catch (error) {
           console.error('Script generation error:', error);
           // Fallback to mock data on error
           const fallbackScript = buildMockScript(product, regenerateVariant);
           setScript(fallbackScript);
+          onStatusChange?.('fallback');
         } finally {
           setIsLoading(false);
         }
@@ -171,6 +179,8 @@ export function StepScriptReview({ onNavigate }: StepScriptReviewProps) {
     setRegenerateVariant(nextVariant);
 
     try {
+      onStatusChange?.('checking');
+      
       const response = await fetch('/api/generate-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,11 +193,13 @@ export function StepScriptReview({ onNavigate }: StepScriptReviewProps) {
 
       const data = await response.json();
       setScript(data.script);
+      onStatusChange?.('working');
     } catch (error) {
       console.error('Script regeneration error:', error);
       // Fallback to mock data on error
       const fallbackScript = buildMockScript(product, nextVariant);
       setScript(fallbackScript);
+      onStatusChange?.('fallback');
     } finally {
       setIsRegenerating(false);
     }
