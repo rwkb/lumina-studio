@@ -125,9 +125,10 @@ function LoadingSkeleton({ count = 4 }: LoadingSkeletonProps) {
 
 interface StepKeyframesProps {
   onNavigate: (step: WizardStep) => void;
+  onStatusChange?: (status: APIStatus) => void;
 }
 
-export function StepKeyframes({ onNavigate }: StepKeyframesProps) {
+export function StepKeyframes({ onNavigate, onStatusChange }: StepKeyframesProps) {
   const product = useWizardStore((state) => state.product);
   const keyframes = useWizardStore((state) => state.keyframes);
   const selectedKeyframeIds = useWizardStore((state) => state.selectedKeyframeIds);

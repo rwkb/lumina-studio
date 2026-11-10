@@ -192,9 +192,10 @@ function GeneratingState({ productName }: GeneratingStateProps) {
 
 interface StepGenerateProps {
   onNavigate: (step: WizardStep) => void;
+  onStatusChange?: (status: APIStatus) => void;
 }
 
-export function StepGenerate({ onNavigate }: StepGenerateProps) {
+export function StepGenerate({ onNavigate, onStatusChange }: StepGenerateProps) {
   const product = useWizardStore((state) => state.product);
   const script = useWizardStore((state) => state.script);
   const keyframes = useWizardStore((state) => state.keyframes);
