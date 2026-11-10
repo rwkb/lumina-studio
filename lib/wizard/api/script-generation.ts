@@ -8,22 +8,103 @@ import { generateText } from '@/lib/api/byteplus-client';
 import type { ProductDraft, VideoScript } from '../types';
 import { FALLBACK_SCRIPT } from '../fallback-data';
 
+/**
+ * Clean and optimize text for specific script sections
+ */
+function cleanText(text: string, section: 'hook' | 'body' | 'cta' | 'voiceover', duration?: string): string {
+  // Remove excessive whitespace
+  let cleaned = text.trim().replace(/\s+/g, ' ');
+  
+  // Remove emoji if present (keep them in captions/hashtags only)
+  if (section !== 'voiceover') {
+    cleaned = cleaned.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+  }
+  
+  // Truncate based on section and duration
+  if (section === 'hook') {
+    // Hooks should be 1 sentence, max 15 words
+    const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim());
+    cleaned = sentences[0] || cleaned;
+    const words = cleaned.split(' ');
+    if (words.length > 15) {
+      cleaned = words.slice(0, 15).join(' ');
+    }
+  } else if (section === 'body') {
+    // Body should be 2-3 sentences
+    const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim());
+    const maxSentences = duration === '15s' ? 1 : duration === '30s' ? 2 : 3;
+    cleaned = sentences.slice(0, maxSentences).join('. ').trim();
+    if (!cleaned.endsWith('.')) cleaned += '.';
+    
+    // Limit word count based on duration
+    const maxWords = duration === '15s' ? 20 : duration === '30s' ? 40 : 60;
+    const words = cleaned.split(' ');
+    if (words.length > maxWords) {
+      cleaned = words.slice(0, maxWords).join(' ');
+      if (!cleaned.endsWith('.')) cleaned += '.';
+    }
+  } else if (section === 'cta') {
+    // CTA should be 1 sentence, max 12 words
+    const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim());
+    cleaned = sentences[0] || cleaned;
+    const words = cleaned.split(' ');
+    if (words.length > 12) {
+      cleaned = words.slice(0, 12).join(' ');
+    }
+    if (!cleaned.endsWith('.')) cleaned += '.';
+  } else if (section === 'voiceover') {
+    // Voiceover should match duration timing (roughly 150 words per minute)
+    const maxWords = duration === '15s' ? 35 : duration === '30s' ? 75 : 150;
+    const words = cleaned.split(' ');
+    if (words.length > maxWords) {
+      cleaned = words.slice(0, maxWords).join(' ');
+      if (!cleaned.endsWith('.')) cleaned += '.';
+    }
+  }
+  
+  return cleaned;
+}
+
 const SYSTEM_PROMPT = `You are an expert video script writer for fashion and beauty brands.
 Generate engaging, platform-optimized video scripts that drive conversions.
 
 IMPORTANT RULES:
 1. Keep scripts SHORT and PUNCHY - optimized for short-form video
 2. Match the requested duration precisely
-3. Write in the requested language
+3. Write ONLY in the requested language (no mixing languages)
 4. Hook should be 1 short sentence (2-3 seconds)
-5. Body should be concise (2-3 key benefits maximum)
+5. Body should be concise (2-3 sentences MAXIMUM)
 6. Voiceover should match the duration timing
-7. Avoid repeating product description verbatim
+7. NEVER copy product description verbatim - always rewrite and summarize
 
 Duration Guidelines:
 - 15s: Hook (2s) + 1 key benefit (8s) + CTA (5s)
 - 30s: Hook (3s) + 2-3 benefits (18s) + CTA (9s)  
 - 60s: Hook (3s) + 3-4 benefits (42s) + CTA (15s)
+
+EXAMPLES OF GOOD SCRIPTS:
+
+For 15s video (English):
+{
+  "hook": "This lip balm just changed the game.",
+  "body": "CLIO Crystal Glam Balm delivers crystal shine with PDRN for plump, glossy lips.",
+  "cta": "Shop 6 stunning shades at the link in bio.",
+  "voiceover": "This lip balm just changed the game. CLIO Crystal Glam Balm delivers crystal shine with PDRN for plump, glossy lips. Shop 6 stunning shades at the link in bio.",
+  "seedancePrompt": "Vertical beauty close-up, glossy lip balm texture, soft lighting",
+  "caption": "Glow up your lips ✨",
+  "hashtags": "#cliomakeup #lipbalm #kbeauty"
+}
+
+For 30s video (English):
+{
+  "hook": "Stop scrolling. Your new lip ritual is here.",
+  "body": "CLIO Crystal Glam Balm Bare combines 10,000 PPM PDRN with a lightweight, non-sticky formula. Choose from 6 gorgeous shades for a crystal-shine finish that lasts all day.",
+  "cta": "Tap the link to find your perfect shade before they sell out.",
+  "voiceover": "Stop scrolling. Your new lip ritual is here. CLIO Crystal Glam Balm Bare combines 10,000 PPM PDRN with a lightweight, non-sticky formula. Choose from 6 gorgeous shades for a crystal-shine finish that lasts all day. Tap the link to find your perfect shade before they sell out.",
+  "seedancePrompt": "Vertical beauty video, soft natural lighting, close-up of lip balm application, glossy finish, model with glowing lips",
+  "caption": "Crystal shine in one swipe 💎",
+  "hashtags": "#cliomakeup #crystalglambalm #kbeauty #lipcare"
+}
 
 Always respond with valid JSON in this exact format:
 {
@@ -88,15 +169,18 @@ Return only valid JSON with no additional text.`;
       throw new Error('Missing required script fields');
     }
 
-    return {
-      hook: parsed.hook,
-      body: parsed.body,
-      cta: parsed.cta,
-      voiceover: parsed.voiceover || '',
+    // Post-process: Clean up the script
+    const cleanedScript = {
+      hook: cleanText(parsed.hook, 'hook'),
+      body: cleanText(parsed.body, 'body', product.duration),
+      cta: cleanText(parsed.cta, 'cta'),
+      voiceover: cleanText(parsed.voiceover, 'voiceover', product.duration),
       seedancePrompt: parsed.seedancePrompt || '',
       caption: parsed.caption || product.description,
       hashtags: parsed.hashtags || '#beauty #skincare',
     };
+
+    return cleanedScript;
   } catch (error) {
     console.error('Script generation failed, using fallback:', error);
     
