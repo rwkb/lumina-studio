@@ -86,7 +86,7 @@ export async function regenerateVideo(
       {
         prompt: `${script.seedancePrompt} (variant ${variant + 1})`,
         duration: 10,
-        size: '9:16_720p',
+        resolution: '9:16_720p',
       }
     );
 
