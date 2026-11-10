@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Check, RefreshCw } from 'lucide-react';
 import { useWizardStore, MIN_SELECTED_KEYFRAMES } from '@/lib/wizard/store';
 import type { Keyframe, WizardStep } from '@/lib/wizard/types';
+import type { APIStatus } from '@/components/wizard/api-status-indicator';
 import { buildMockKeyframes, pickAlternateKeyframeImage } from '@/lib/wizard/mock-data';
 import { FALLBACK_KEYFRAMES } from '@/lib/wizard/fallback-data';
 import { StepHeading } from '../step-heading';

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, RefreshCw, Play, Copy, Check } from 'lucide-react';
 import { useWizardStore } from '@/lib/wizard/store';
 import type { GeneratedVideo, WizardStep } from '@/lib/wizard/types';
+import type { APIStatus } from '@/components/wizard/api-status-indicator';
 import { buildMockVideos } from '@/lib/wizard/mock-data';
 import { FALLBACK_VIDEO_URL } from '@/lib/wizard/fallback-data';
 import { StepHeading } from '../step-heading';
