@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { RefreshCw } from 'lucide-react';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { ProgressStepper } from './progress-stepper';
+import { Button } from '@/components/ui/button';
 import { StepProductInput } from './steps/step-product-input';
 import { StepScriptReview } from './steps/step-script-review';
 import { StepKeyframes } from './steps/step-keyframes';
@@ -40,6 +42,7 @@ export function WizardShell() {
   const selectedKeyframeIds = useWizardStore((state) => state.selectedKeyframeIds);
   const generatedVideos = useWizardStore((state) => state.generatedVideos);
   const goToStep = useWizardStore((state) => state.goToStep);
+  const resetWizard = useWizardStore((state) => state.resetWizard);
 
   const [isReady, setIsReady] = useState(false);
   const [direction, setDirection] = useState(1);
@@ -88,7 +91,23 @@ export function WizardShell() {
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-20 pt-10 lg:px-10">
-        <ProgressStepper currentStep={currentStep} onSelect={navigate} />
+        <div className="mb-6 flex items-center justify-between">
+          <ProgressStepper currentStep={currentStep} onSelect={navigate} />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (confirm('Clear all progress and start over? This cannot be undone.')) {
+                resetWizard();
+                window.location.href = '/';
+              }
+            }}
+            className="text-ink-500 hover:text-ink-700"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Start Over
+          </Button>
+        </div>
 
         <div className="mt-12 rounded-3xl border border-white bg-card p-6 shadow-soft sm:p-8 md:p-12">
           <p className="sr-only">
