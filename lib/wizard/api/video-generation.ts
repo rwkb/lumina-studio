@@ -33,7 +33,7 @@ export async function generateVideos(
       {
         prompt: script.seedancePrompt || `Create an engaging ${product.platform} video for ${product.name}. ${script.body}`,
         duration: 10, // 10 second video
-        size: '9:16_720p', // Vertical format for social media
+        resolution: '9:16_720p', // Vertical format for social media
       }
     );
 
