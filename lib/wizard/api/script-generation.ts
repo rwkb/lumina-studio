@@ -206,7 +206,9 @@ Return only valid JSON with no additional text.`;
 
     return cleanedScript;
   } catch (error) {
-    console.error('Script generation failed, using fallback:', error);
+    console.error('[Script Generation] API call failed:', error);
+    console.error('[Script Generation] Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('[Script Generation] Using FALLBACK_SCRIPT instead');
     
     // Fallback to mock data on error
     return FALLBACK_SCRIPT;
