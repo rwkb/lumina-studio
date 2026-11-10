@@ -36,12 +36,27 @@ function cleanText(text: string, section: 'hook' | 'body' | 'cta' | 'voiceover',
     cleaned = sentences.slice(0, maxSentences).join('. ').trim();
     if (!cleaned.endsWith('.')) cleaned += '.';
     
-    // Limit word count based on duration
+    // Limit word count based on duration, but try to keep complete sentences
     const maxWords = duration === '15s' ? 20 : duration === '30s' ? 40 : 60;
     const words = cleaned.split(' ');
     if (words.length > maxWords) {
-      cleaned = words.slice(0, maxWords).join(' ');
-      if (!cleaned.endsWith('.')) cleaned += '.';
+      // Try to find a good break point (end of sentence)
+      const truncated = words.slice(0, maxWords).join(' ');
+      // If the truncated text doesn't end with punctuation, find the last complete sentence
+      if (!truncated.match(/[.!?]$/)) {
+        const lastPunctuation = Math.max(
+          truncated.lastIndexOf('.'),
+          truncated.lastIndexOf('!'),
+          truncated.lastIndexOf('?')
+        );
+        if (lastPunctuation > 0) {
+          cleaned = truncated.substring(0, lastPunctuation + 1);
+        } else {
+          cleaned = truncated + '.';
+        }
+      } else {
+        cleaned = truncated;
+      }
     }
   } else if (section === 'cta') {
     // CTA should be 1 sentence, max 12 words
