@@ -45,9 +45,9 @@ export async function generateScript(
 ): Promise<VideoScript> {
   // Determine language instruction
   const languageInstruction = {
-    'English': 'Write the script in English',
-    '繁體中文': '用繁體中文撰寫腳本',
-    '简体中文': '用简体中文撰写脚本',
+    'English': 'Write the ENTIRE script in English only. DO NOT include any Chinese characters. Translate any Chinese product descriptions to English.',
+    '繁體中文': '用繁體中文撰寫完整腳本，不要包含英文。',
+    '简体中文': '用简体中文撰写完整脚本，不要包含英文。',
   }[product.language];
 
   const prompt = `Generate a ${product.platform} video script for:
@@ -65,6 +65,13 @@ ${getStyleGuidelines(product.style)}
 
 Duration: ${product.duration} - Match this timing precisely
 Language: ${languageInstruction}
+
+CRITICAL: 
+- Do NOT copy the product description verbatim
+- Extract key benefits and rewrite them in your own words
+- Keep it SHORT - 2-3 sentences maximum for the body
+- Match the requested language exactly
+- If product description contains Chinese but language is English, translate to English
 
 Variant: ${variant} (generate a ${variant === 0 ? 'first' : 'different'} creative approach)
 
