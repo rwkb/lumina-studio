@@ -151,52 +151,38 @@ export async function generateScript(
   console.log('[Script Generation] Starting generation for:', product.name);
   console.log('[Script Generation] Variant:', variant);
   
-  // Simplified language instruction
-  const languageInstruction = product.language === 'English' 
-    ? 'Write in English only.' 
-    : product.language === '繁體中文' 
-      ? '用繁體中文撰寫。' 
-      : '用简体中文撰写。';
-
-  // SIMPLIFIED PROMPT to reduce API response time
-  const prompt = `Generate a ${product.duration} TikTok video script in JSON format for:
-
-Product: ${product.name}
-Description: ${product.description.substring(0, 200)}
-Language: ${languageInstruction}
-
-Return JSON with: hook (1 sentence), body (2-3 sentences), cta (1 sentence), voiceover (full script), seedancePrompt (video description), caption, hashtags.`;
-
   try {
-    console.log('[Script Generation] Calling BytePlus API with simplified prompt...');
+    // Test with simplest possible prompt first
+    const testPrompt = `Generate a JSON object for a TikTok video script with these fields: hook, body, cta, voiceover, seedancePrompt, caption, hashtags. Product: ${product.name}`;
     
-    const response = await generateText(prompt);
-    console.log('[Script Generation] Response received, length:', response.length);
+    console.log('[Script Generation] Calling BytePlus API...');
+    const response = await generateText(testPrompt);
+    console.log('[Script Generation] Response received:', response);
     
     // Parse JSON response
     const parsed = JSON.parse(response);
     
     // Validate required fields
     if (!parsed.hook || !parsed.body || !parsed.cta) {
-      throw new Error('Missing required script fields');
+      console.error('[Script Generation] Missing fields, using fallback');
+      return FALLBACK_SCRIPT;
     }
 
-    // Post-process: Clean up the script
+    // Clean up the script
     const cleanedScript = {
       hook: cleanText(parsed.hook, 'hook', undefined, product.language),
       body: cleanText(parsed.body, 'body', product.duration, product.language),
       cta: cleanText(parsed.cta, 'cta', undefined, product.language),
       voiceover: cleanText(parsed.voiceover, 'voiceover', product.duration, product.language),
-      seedancePrompt: parsed.seedancePrompt || `Vertical beauty video, ${product.style} style, soft lighting`,
+      seedancePrompt: parsed.seedancePrompt || `Vertical beauty video, ${product.style} style`,
       caption: parsed.caption || product.description.substring(0, 100),
       hashtags: parsed.hashtags || '#beauty #skincare',
     };
 
-    console.log('[Script Generation] Script generation complete');
+    console.log('[Script Generation] Complete');
     return cleanedScript;
   } catch (error) {
     console.error('[Script Generation] Failed:', error);
-    console.error('[Script Generation] Using fallback script');
     return FALLBACK_SCRIPT;
   }
 }
