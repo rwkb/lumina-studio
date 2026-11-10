@@ -22,8 +22,9 @@ function cleanText(text: string, section: 'hook' | 'body' | 'cta' | 'voiceover',
   
   // CRITICAL: Remove Chinese characters if language is English
   if (language === 'English') {
-    // Remove Chinese characters (CJK Unified Ideographs and extensions)
-    cleaned = cleaned.replace(/[\u4e00-\u9fff\u3400-\u4dbf\U00020000-\U0002a6df\U0002a700-\U0002b73f\U0002b740-\U0002b81f\U0002b820-\U0002ceaf]/gu, '').trim();
+    // Remove Chinese characters (CJK Unified Ideographs)
+    // Using simple range that covers most common Chinese characters
+    cleaned = cleaned.replace(/[\u4e00-\u9fff]/g, '').trim();
     // Clean up any resulting double spaces
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
   }
