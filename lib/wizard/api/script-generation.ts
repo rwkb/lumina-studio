@@ -11,13 +11,21 @@ import { FALLBACK_SCRIPT } from '../fallback-data';
 /**
  * Clean and optimize text for specific script sections
  */
-function cleanText(text: string, section: 'hook' | 'body' | 'cta' | 'voiceover', duration?: string): string {
+function cleanText(text: string, section: 'hook' | 'body' | 'cta' | 'voiceover', duration?: string, language?: string): string {
   // Remove excessive whitespace
   let cleaned = text.trim().replace(/\s+/g, ' ');
   
-  // Remove emoji if present (keep them in captions/hashtags only)
+  // Remove emojis from script text (keep them in captions/hashtags only)
   if (section !== 'voiceover') {
     cleaned = cleaned.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+  }
+  
+  // CRITICAL: Remove Chinese characters if language is English
+  if (language === 'English') {
+    // Remove Chinese characters (CJK Unified Ideographs and extensions)
+    cleaned = cleaned.replace(/[\u4e00-\u9fff\u3400-\u4dbf\U00020000-\U0002a6df\U0002a700-\U0002b73f\U0002b740-\U0002b81f\U0002b820-\U0002ceaf]/gu, '').trim();
+    // Clean up any resulting double spaces
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
   }
   
   // Truncate based on section and duration
@@ -186,10 +194,10 @@ Return only valid JSON with no additional text.`;
 
     // Post-process: Clean up the script
     const cleanedScript = {
-      hook: cleanText(parsed.hook, 'hook'),
-      body: cleanText(parsed.body, 'body', product.duration),
-      cta: cleanText(parsed.cta, 'cta'),
-      voiceover: cleanText(parsed.voiceover, 'voiceover', product.duration),
+      hook: cleanText(parsed.hook, 'hook', undefined, product.language),
+      body: cleanText(parsed.body, 'body', product.duration, product.language),
+      cta: cleanText(parsed.cta, 'cta', undefined, product.language),
+      voiceover: cleanText(parsed.voiceover, 'voiceover', product.duration, product.language),
       seedancePrompt: parsed.seedancePrompt || '',
       caption: parsed.caption || product.description,
       hashtags: parsed.hashtags || '#beauty #skincare',
