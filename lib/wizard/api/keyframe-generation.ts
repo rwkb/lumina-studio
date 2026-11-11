@@ -58,8 +58,8 @@ export async function generateKeyframes(
         promptPreview: prompt.substring(0, 80) + '...'
       });
       
-      // Use 1K for faster generation
-      const imageUrl = await generateImageFromPrompt(prompt, { size: '1K' });
+      // Use 2k for BytePlus IGA (1k not supported, IGA only accepts 2k, 3k, 4k)
+      const imageUrl = await generateImageFromPrompt(prompt, { size: '2k' });
       
       // Validate the returned URL
       if (!imageUrl || imageUrl.length < 10) {

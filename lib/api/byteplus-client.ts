@@ -98,7 +98,7 @@ export async function generateText(
 export async function generateImageFromPrompt(
   prompt: string,
   options?: {
-    size?: '1K' | '2K' | '4K';
+    size?: '2k' | '3k' | '4k';  // BytePlus IGA only supports these values (lowercase)
     watermark?: boolean;
   }
 ): Promise<string> {
@@ -317,7 +317,7 @@ export async function testConnection(): Promise<{ text: boolean; image: boolean;
 
   // Test image generation
   try {
-    await generateImageFromPrompt('A simple red circle on white background', { size: '1K' });
+    await generateImageFromPrompt('A simple red circle on white background', { size: '2k' });
     results.image = true;
   } catch (error) {
     console.warn('Image API test failed:', error);
