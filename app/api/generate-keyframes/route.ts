@@ -20,9 +20,10 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json();
-    const { product, script } = body as { 
+    const { product, script, regenerateIndex } = body as { 
       product: ProductDraft; 
       script: VideoScript;
+      regenerateIndex?: number;
     };
 
     if (!product || !script) {
@@ -33,22 +34,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[API Route] Generating keyframes for: ${product.name}`);
-
-    const keyframes = await generateKeyframes(product, script);
-    
-    console.log('[API Route] Keyframes generated successfully, count:', keyframes.length);
-
-    return NextResponse.json({ 
-      success: true,
-      keyframes 
+    console.log(`[API Route] Generating keyframes for: ${product.name}`, {
+      productName: product.name,
+      productPlatform: product.platform,
+      productStyle: product.style,
+      hasScript: !!script,
+      scriptLength: script?.body?.length || 0,
+      regenerateIndex: regenerateIndex
     });
+
+    const result = await generateKeyframes(product, script);
+    
+    console.log('[API Route] Keyframes generation complete:', {
+      totalKeyframes: result.keyframes.length,
+      successCount: result.successCount,
+      fallbackCount: result.fallbackCount,
+      errorCount: result.errorDetails.length,
+      errors: result.errorDetails
+    });
+
+    // Determine actual success based on whether real images were generated
+    const hasRealImages = result.successCount > 0;
+    const allFallbacks = result.fallbackCount === result.keyframes.length;
+    
+    // Response includes metadata about what actually happened
+    const response = {
+      success: hasRealImages && !allFallbacks, // false if ALL images are fallbacks
+      keyframes: result.keyframes,
+      usedFallback: result.fallbackCount > 0,
+      fallbackCount: result.fallbackCount,
+      successCount: result.successCount,
+      errorDetails: result.errorDetails,
+      metadata: {
+        totalRequested: result.keyframes.length,
+        realImages: result.successCount,
+        fallbackImages: result.fallbackCount,
+        allFallbacks: allFallbacks
+      }
+    };
+
+    console.log('[API Route] Sending response:', {
+      success: response.success,
+      usedFallback: response.usedFallback,
+      fallbackCount: response.fallbackCount,
+      successCount: response.successCount
+    });
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('[API Route] Keyframe generation failed:', error);
     console.error('[API Route] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
     return NextResponse.json(
       { 
+        success: false,
         error: 'Failed to generate keyframes',
         details: error instanceof Error ? error.message : 'Unknown error',
         stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined

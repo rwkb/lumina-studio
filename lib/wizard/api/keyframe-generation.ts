@@ -16,27 +16,55 @@ const KEYFRAME_LABELS = [
 ] as const;
 
 /**
+ * Result of keyframe generation with metadata
+ */
+export interface KeyframeGenerationResult {
+  keyframes: Keyframe[];
+  successCount: number;
+  fallbackCount: number;
+  errorDetails: string[];
+}
+
+/**
  * Generate 4 keyframe images for the video
  * Note: Generates sequentially to avoid Netlify function timeout
  */
 export async function generateKeyframes(
   product: ProductDraft,
   script: VideoScript
-): Promise<Keyframe[]> {
+): Promise<KeyframeGenerationResult> {
   const keyframes: Keyframe[] = [];
   const timestamp = Date.now();
+  const errorDetails: string[] = [];
+  let successCount = 0;
+  let fallbackCount = 0;
 
-  console.log('[Keyframe Generation] Starting sequential image generation...');
+  console.log('[Keyframe Generation] Starting sequential image generation...', {
+    product: product.name,
+    platform: product.platform,
+    style: product.style,
+    startTime: new Date().toISOString()
+  });
   
   // Generate images sequentially to avoid timeout
   for (let index = 0; index < KEYFRAME_LABELS.length; index++) {
     const label = KEYFRAME_LABELS[index];
-    console.log(`[Keyframe Generation] Generating ${label} (${index + 1}/4)...`);
+    console.log(`[Keyframe Generation] Generating keyframe ${index + 1}/4: "${label}"`);
     
     try {
       const prompt = buildKeyframePrompt(product, script, label, index);
+      console.log(`[Keyframe Generation] Prompt built for "${label}"`, {
+        promptLength: prompt.length,
+        promptPreview: prompt.substring(0, 80) + '...'
+      });
+      
       // Use 1K for faster generation
       const imageUrl = await generateImageFromPrompt(prompt, { size: '1K' });
+      
+      // Validate the returned URL
+      if (!imageUrl || imageUrl.length < 10) {
+        throw new Error(`Invalid image URL returned: ${imageUrl}`);
+      }
       
       keyframes.push({
         id: `kf-${timestamp}-${index}`,
@@ -44,21 +72,48 @@ export async function generateKeyframes(
         imageUrl,
       });
       
-      console.log(`[Keyframe Generation] ${label} generated successfully`);
+      successCount++;
+      console.log(`[Keyframe Generation] ✓ "${label}" generated successfully`, {
+        urlLength: imageUrl.length,
+        urlPreview: imageUrl.substring(0, 60) + '...'
+      });
     } catch (error) {
-      console.warn(`[Keyframe Generation] ${label} failed, using fallback:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const fallbackUrl = FALLBACK_KEYFRAMES[index]?.imageUrl || '';
+      
+      console.warn(`[Keyframe Generation] ✗ "${label}" failed, using fallback`, {
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        fallbackUrlLength: fallbackUrl.length,
+        isFallbackTransparent: fallbackUrl.includes('data:image') && fallbackUrl.length < 200
+      });
+      
+      errorDetails.push(`[${label}] ${errorMessage}`);
+      fallbackCount++;
+      
       // Use fallback for this specific keyframe
       keyframes.push({
         id: `kf-${timestamp}-${index}`,
         label,
-        imageUrl: FALLBACK_KEYFRAMES[index]?.imageUrl || '',
+        imageUrl: fallbackUrl,
       });
     }
   }
 
-  console.log(`[Keyframe Generation] Complete. Generated ${keyframes.filter(k => k.imageUrl && !k.imageUrl.includes('unsplash')).length}/4 from API`);
+  // Final summary with metadata
+  console.log(`[Keyframe Generation] ========== GENERATION SUMMARY ==========`);
+  console.log(`[Keyframe Generation] Total: 4 keyframes`);
+  console.log(`[Keyframe Generation] Success: ${successCount} from BytePlus API`);
+  console.log(`[Keyframe Generation] Fallback: ${fallbackCount} (invisible 1x1 pixels)`);
+  console.log(`[Keyframe Generation] Error details:`, errorDetails);
+  console.log(`[Keyframe Generation] =========================================`);
   
-  return keyframes;
+  return {
+    keyframes,
+    successCount,
+    fallbackCount,
+    errorDetails
+  };
 }
 
 /**

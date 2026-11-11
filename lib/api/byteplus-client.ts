@@ -103,13 +103,29 @@ export async function generateImageFromPrompt(
   }
 ): Promise<string> {
   const { API_BASE, API_KEY, SEEDREAM_MODEL } = getConfig();
+  const startTime = Date.now();
+  const timestamp = new Date().toISOString();
+  
+  // Log API call start with request parameters
+  console.log(`[BytePlus Seedream] ${timestamp} - Starting image generation`, {
+    model: SEEDREAM_MODEL,
+    size: options?.size || '2k',
+    promptPreview: prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''),
+    hasApiKey: !!API_KEY,
+    apiKeyPrefix: API_KEY ? API_KEY.substring(0, 8) + '...' : 'missing'
+  });
   
   if (!API_KEY) {
-    throw new Error('ARK_API_KEY environment variable is not set');
+    const errorMsg = 'ARK_API_KEY environment variable is not set';
+    console.error(`[BytePlus Seedream] ${timestamp} - Authentication error: ${errorMsg}`);
+    throw new Error(errorMsg);
   }
   
   try {
-    const response = await fetch(`${API_BASE}/images/generations`, {
+    const requestUrl = `${API_BASE}/images/generations`;
+    console.log(`[BytePlus Seedream] ${timestamp} - Sending request to: ${requestUrl}`);
+    
+    const response = await fetch(requestUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -125,22 +141,57 @@ export async function generateImageFromPrompt(
       }),
     });
 
+    const responseTime = Date.now() - startTime;
+    console.log(`[BytePlus Seedream] ${timestamp} - Response received`, {
+      status: response.status,
+      statusText: response.statusText,
+      responseTimeMs: responseTime,
+      responseTimeSec: (responseTime / 1000).toFixed(2)
+    });
+
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`API error ${response.status}: ${error}`);
+      const errorText = await response.text();
+      console.error(`[BytePlus Seedream] ${timestamp} - API error response`, {
+        status: response.status,
+        statusText: response.statusText,
+        errorBody: errorText,
+        responseTimeMs: responseTime
+      });
+      throw new Error(`API error ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
+    console.log(`[BytePlus Seedream] ${timestamp} - Response parsed`, {
+      hasData: !!data.data,
+      dataLength: data.data?.length,
+      firstItemHasUrl: !!(data.data && data.data[0]?.url)
+    });
     
     // Extract image URL from response
     // Response format: { data: [{ url: "..." }] }
     if (data.data && data.data[0]?.url) {
-      return data.data[0].url;
+      const imageUrl = data.data[0].url;
+      console.log(`[BytePlus Seedream] ${timestamp} - Image generated successfully`, {
+        urlLength: imageUrl.length,
+        urlPreview: imageUrl.substring(0, 50) + '...',
+        totalTimeMs: Date.now() - startTime
+      });
+      return imageUrl;
     }
 
+    console.error(`[BytePlus Seedream] ${timestamp} - No image URL in response`, {
+      responseKeys: Object.keys(data),
+      dataKeys: data.data ? Object.keys(data.data) : 'no data array'
+    });
     throw new Error('No image generated');
   } catch (error) {
-    console.error('Image generation failed:', error);
+    const totalTime = Date.now() - startTime;
+    console.error(`[BytePlus Seedream] ${timestamp} - Image generation failed`, {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : 'No stack',
+      totalTimeMs: totalTime
+    });
     throw error;
   }
 }

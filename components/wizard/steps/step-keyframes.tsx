@@ -175,12 +175,55 @@ export function StepKeyframes({ onNavigate, onStatusChange }: StepKeyframesProps
           }
 
           const data = await response.json();
-          console.log('[Keyframes] Received data:', data);
+          
+          // Log detailed response metadata for debugging
+          console.log('[Keyframes] Received response metadata:', {
+            success: data.success,
+            usedFallback: data.usedFallback,
+            fallbackCount: data.fallbackCount,
+            successCount: data.successCount,
+            errorDetails: data.errorDetails,
+            metadata: data.metadata
+          });
+          
+          // Log warning if fallbacks were used
+          if (data.usedFallback && data.fallbackCount > 0) {
+            console.warn(`[Keyframes] ⚠️ ${data.fallbackCount}/4 images are fallbacks (invisible 1x1 pixels)`);
+            if (data.errorDetails && data.errorDetails.length > 0) {
+              console.warn('[Keyframes] Error details:', data.errorDetails);
+            }
+          }
+          
+          // Development mode: log detailed error information
+          if (process.env.NODE_ENV === 'development' && data.errorDetails?.length > 0) {
+            console.group('[Keyframes] Detailed error information:');
+            data.errorDetails.forEach((err: string, i: number) => {
+              console.error(`  [${i + 1}] ${err}`);
+            });
+            console.groupEnd();
+          }
+          
           setKeyframes(data.keyframes);
           
-          // Notify parent of successful API status
+          // Determine API status based on actual response metadata
+          let apiStatus: APIStatus;
+          if (data.success === true && data.fallbackCount === 0) {
+            // All images generated successfully from BytePlus API
+            apiStatus = 'working';
+            console.log('[Keyframes] API status: working (all real images)');
+          } else if (data.success === true && data.fallbackCount > 0) {
+            // Partial success: some real images, some fallbacks
+            apiStatus = 'partial';
+            console.log(`[Keyframes] API status: partial (${data.successCount} real, ${data.fallbackCount} fallbacks)`);
+          } else {
+            // All images are fallbacks - API effectively failed
+            apiStatus = 'fallback';
+            console.log('[Keyframes] API status: fallback (all images are fallbacks)');
+          }
+          
+          // Notify parent of API status
           if (onStatusChange) {
-            onStatusChange('working');
+            onStatusChange(apiStatus);
           }
         } catch (error) {
           console.error('[Keyframes] Generation error:', error);

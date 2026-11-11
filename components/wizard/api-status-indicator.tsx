@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type APIStatus = 'working' | 'fallback' | 'checking' | 'idle';
+export type APIStatus = 'working' | 'partial' | 'fallback' | 'checking' | 'idle';
 
 interface APIStatusIndicatorProps {
   status: APIStatus;
@@ -20,6 +20,13 @@ export function APIStatusIndicator({ status, label, className }: APIStatusIndica
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
       label: 'API Connected',
+    },
+    partial: {
+      icon: AlertCircle,
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+      borderColor: 'border-yellow-200',
+      label: 'Partial Success',
     },
     fallback: {
       icon: AlertCircle,
