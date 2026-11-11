@@ -180,7 +180,7 @@ export function StepKeyframes({ onNavigate, onStatusChange }: StepKeyframesProps
           
           // Notify parent of successful API status
           if (onStatusChange) {
-            onStatusChange('connected');
+            onStatusChange('working');
           }
         } catch (error) {
           console.error('[Keyframes] Generation error:', error);
