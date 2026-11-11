@@ -135,7 +135,7 @@ export async function generateImageFromPrompt(
         model: SEEDREAM_MODEL,
         prompt,
         response_format: 'url',
-        size: options?.size || '2k',
+        size: options?.size || '2K',  // Uppercase K required by BytePlus API
         stream: false,
         watermark: options?.watermark ?? false,
       }),
