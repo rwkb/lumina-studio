@@ -127,7 +127,7 @@ export async function regenerateKeyframe(
 ): Promise<string> {
   try {
     const prompt = buildKeyframePrompt(product, script, label, index);
-    const imageUrl = await generateImageFromPrompt(prompt, { size: '2K' });
+    const imageUrl = await generateImageFromPrompt(prompt, { size: '2k' });
     return imageUrl;
   } catch (error) {
     console.error('Keyframe regeneration failed:', error);
